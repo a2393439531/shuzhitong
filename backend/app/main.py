@@ -11,6 +11,8 @@ from .routers import (
     approvals,
     audit,
     auth,
+    bases,
+    changes,
     compliance,
     dashboard,
     domains,
@@ -19,6 +21,7 @@ from .routers import (
     masterdata,
     metrics,
     objects,
+    ops,
     processes,
     qa,
     quality,
@@ -63,6 +66,9 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(bases.router)
+app.include_router(changes.router)
+app.include_router(ops.router)
 app.include_router(domains.router)
 app.include_router(objects.router)
 app.include_router(processes.router)

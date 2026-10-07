@@ -5,6 +5,7 @@ from .auth import hash_password
 from .database import get_conn
 from .deps import now_str
 from .seed_phase2 import seed_phase2
+from .seed_phase4 import seed_phase4
 from .seed_metrics import seed_metrics
 from .seed_services import seed_services
 
@@ -324,3 +325,4 @@ def seed() -> None:
     seed_phase2()  # 二期种子（各表为空才灌；即使一期已灌过也会执行）
     seed_metrics()  # 三期种子：试点工单/领料数据 + 指标定义（幂等）
     seed_services()  # 三期种子：5 个可调服务（按 code upsert，幂等）
+    seed_phase4()  # 四期种子：基地档案 + 标准/指标基地差异（幂等）

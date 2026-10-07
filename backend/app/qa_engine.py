@@ -389,6 +389,74 @@ def get_caliber(conn, code: str) -> dict:
             "target": local.get("target", "")}
 
 
+def get_effective_caliber(conn, code: str, base_code: str | None = None) -> dict:
+    """合并基地差异后的有效口径。
+
+    返回 {"caliber", "target", "base_note"}；base_code 为空或无已发布差异时
+    base_note 为 ""，调用方无需声明。
+    """
+    base = get_caliber(conn, code)
+    note = ""
+    if base_code:
+        try:
+            ind = conn.execute(
+                "SELECT id, code FROM indicators WHERE code = ?", (code,)
+            ).fetchone()
+            if ind:
+                diff = conn.execute(
+                    """SELECT d.diff_type, d.diff_desc, d.reason, b.name
+                       FROM indicator_base_diff d
+                       LEFT JOIN bases b ON b.code = d.base_code
+                       WHERE d.indicator_id = ? AND d.base_code = ?
+                         AND d.status = '已发布'""",
+                    (ind["id"], base_code),
+                ).fetchone()
+                if diff:
+                    desc = parse_json(diff["diff_desc"], {})
+                    scope_note = desc.get("scope_note", "") if isinstance(desc, dict) else ""
+                    bname = diff["name"] or base_code
+                    note = (f"本次采用{bname}口径（{diff['diff_type']}差异）："
+                            f"{scope_note or diff['reason'] or ''}").strip("：")
+        except Exception:
+            pass
+    return {"caliber": base["caliber"], "target": base["target"], "base_note": note}
+
+
+def get_effective_allowed_values(conn, standard_id: int,
+                                 base_code: str | None = None) -> dict:
+    """标准在指定基地的有效允许值（合并基地差异）。
+
+    返回 {"allowed_values": [...], "base_note": ""}。
+    """
+    s = conn.execute(
+        "SELECT code, allowed_values FROM standards WHERE id = ?",
+        (standard_id,)).fetchone()
+    if s is None:
+        return {"allowed_values": [], "base_note": ""}
+    values = parse_json(s["allowed_values"], []) or []
+    note = ""
+    if base_code:
+        try:
+            diff = conn.execute(
+                """SELECT d.diff_type, d.diff_desc, d.reason, b.name
+                   FROM std_base_diff d
+                   LEFT JOIN bases b ON b.code = d.base_code
+                   WHERE d.standard_id = ? AND d.base_code = ?
+                     AND d.status = '已发布'""",
+                (standard_id, base_code),
+            ).fetchone()
+            if diff:
+                desc = parse_json(diff["diff_desc"], {})
+                if isinstance(desc, dict) and desc.get("allowed_values"):
+                    values = desc["allowed_values"]
+                bname = diff["name"] or base_code
+                note = (f"本次采用{bname}差异口径（{diff['diff_type']}）："
+                        f"{diff['reason'] or ''}").strip("：")
+        except Exception:
+            pass
+    return {"allowed_values": values, "base_note": note}
+
+
 # ================= 结论组装（只陈述真实数字） =================
 
 def _fmt_num(v) -> str:

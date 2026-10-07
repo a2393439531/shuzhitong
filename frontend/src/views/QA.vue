@@ -31,6 +31,10 @@
     <el-card class="right-panel">
       <!-- 示例问题 -->
       <div class="example-bar">
+        <el-select v-model="baseCode" placeholder="基地：集团共性" clearable size="small" style="width: 170px">
+          <el-option label="集团共性口径" value="" />
+          <el-option v-for="b in bases" :key="b.code" :label="b.name + '（' + b.code + '）'" :value="b.code" />
+        </el-select>
         <span class="example-label">试试问：</span>
         <el-button
           v-for="q in exampleQuestions"
@@ -112,6 +116,7 @@
                     <el-descriptions-item label="口径">{{ msg.scope?.caliber || '-' }}</el-descriptions-item>
                     <el-descriptions-item label="时间">{{ msg.scope?.time || '-' }}</el-descriptions-item>
                     <el-descriptions-item label="组织">{{ msg.scope?.org || '-' }}</el-descriptions-item>
+                    <el-descriptions-item label="基地口径">{{ msg.scope?.base?.note || '集团共性口径' }}</el-descriptions-item>
                   </el-descriptions>
                 </div>
 
@@ -200,6 +205,7 @@ import { Star, Document } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import {
   askQaApi, listQaHistoryApi, favoriteQaApi, rerunQaApi, deleteQaApi,
+  listBasesApi,
 } from '../api/index.js'
 
 const exampleQuestions = [
@@ -354,7 +360,7 @@ async function sendQuestion(text) {
   scrollToBottom()
   asking.value = true
   try {
-    const { data } = await askQaApi({ question })
+    const { data } = await askQaApi({ question, base_code: baseCode.value || undefined })
     pushAnswer(data)
     if (historyTab.value === 'history') loadHistory()
   } catch (e) {
@@ -434,8 +440,19 @@ function onResize() {
   Object.values(chartInstances).forEach((c) => c?.resize())
 }
 
+const bases = ref([])
+const baseCode = ref('')
+
+async function loadBases() {
+  try {
+    const { data } = await listBasesApi()
+    bases.value = Array.isArray(data) ? data : []
+  } catch (_) { /* 忽略 */ }
+}
+
 onMounted(() => {
   loadHistory()
+  loadBases()
   window.addEventListener('resize', onResize)
 })
 onUnmounted(() => {

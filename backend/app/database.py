@@ -547,6 +547,109 @@ class MaterialIssue(Base):
     dept = Column(String)
 
 
+# ================= 四期表结构（推广运营） =================
+
+class BaseSite(Base):
+    """基地档案：共性（集团）/ 基地差异两层治理的组织维度。"""
+    __tablename__ = "bases"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    code = Column(String, nullable=False, unique=True)  # 如 BASE-A
+    name = Column(String, nullable=False)               # 如 基地A
+    stack_type = Column(String)                         # 堆型，如 PWR1000
+    status = Column(String, nullable=False, default="运行中")
+    description = Column(String)
+    created_at = Column(String, nullable=False)
+
+
+class StdBaseDiff(Base):
+    """标准基地差异：同一标准在不同基地的允许值/口径差异登记。"""
+    __tablename__ = "std_base_diff"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    standard_id = Column(Integer, nullable=False)
+    base_code = Column(String, nullable=False)
+    diff_type = Column(String, nullable=False, default="允许值")  # 允许值/口径/必填/格式
+    diff_desc = Column(String)   # JSON，如 {"allowed_values": [...], "note": "..."}
+    reason = Column(String)      # 差异原因
+    effective_from = Column(String)
+    effective_to = Column(String)
+    status = Column(String, nullable=False, default="草稿")  # 草稿/已发布
+    created_at = Column(String, nullable=False)
+
+
+class IndicatorBaseDiff(Base):
+    """指标基地差异：同一指标在不同基地的口径/范围差异登记。"""
+    __tablename__ = "indicator_base_diff"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    indicator_id = Column(Integer, nullable=False)
+    base_code = Column(String, nullable=False)
+    diff_type = Column(String, nullable=False, default="口径")
+    diff_desc = Column(String)   # JSON，如 {"scope_note": "...", "formula_note": "..."}
+    reason = Column(String)
+    effective_from = Column(String)
+    effective_to = Column(String)
+    status = Column(String, nullable=False, default="草稿")
+    created_at = Column(String, nullable=False)
+
+
+class ChangeRequest(Base):
+    """变更申请：标准版本 / 主数据模型 / 指标口径 / 服务接口。"""
+    __tablename__ = "change_requests"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    change_type = Column(String, nullable=False)  # 标准版本/主数据模型/指标口径/服务接口
+    target_type = Column(String, nullable=False)  # standard/indicator/service/md_model
+    target_id = Column(Integer, nullable=False)
+    target_code = Column(String)
+    title = Column(String, nullable=False)
+    change_desc = Column(String)
+    version_from = Column(String)
+    version_to = Column(String)
+    snapshot = Column(String)  # JSON：变更前目标行快照（回退用）
+    status = Column(String, nullable=False, default="草稿")
+    # 草稿/影响分析中/待确认/待生效/已生效/已回退/已驳回
+    applicant = Column(String)
+    created_at = Column(String, nullable=False)
+    effective_at = Column(String)
+
+
+class ChangeImpact(Base):
+    """影响分析明细：自动生成的受影响资产清单。"""
+    __tablename__ = "change_impacts"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    change_id = Column(Integer, nullable=False)
+    category = Column(String, nullable=False)  # 字段映射/质量规则/落标检查/数据目录/数据服务/指标/责任人/调用方
+    ref_type = Column(String)
+    ref_id = Column(Integer)
+    ref_desc = Column(String)
+    action_needed = Column(String)
+    created_at = Column(String, nullable=False)
+
+
+class ChangeConfirmation(Base):
+    """责任人确认：影响性变更生效前的逐项确认。"""
+    __tablename__ = "change_confirmations"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    change_id = Column(Integer, nullable=False)
+    confirmer = Column(String, nullable=False)   # 确认人用户名
+    confirm_role = Column(String)                # 责任人类别说明
+    status = Column(String, nullable=False, default="待确认")  # 待确认/已确认/已驳回
+    comment = Column(String)
+    acted_at = Column(String)
+    created_at = Column(String, nullable=False)
+
+
+class ChangeNotice(Base):
+    """变更通知记录：生效后通知订阅方/调用方/责任人。"""
+    __tablename__ = "change_notices"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    change_id = Column(Integer, nullable=False)
+    audience = Column(String)   # 订阅方/调用方/责任人/申请人
+    recipient = Column(String)
+    channel = Column(String, nullable=False, default="站内")
+    content = Column(String)
+    status = Column(String, nullable=False, default="已发送")
+    sent_at = Column(String, nullable=False)
+
+
 # ================= 轻量迁移：既有表新增列 =================
 # {表名: [(列名, 类型), ...]}，init_db 时自动补列（SQLite / PostgreSQL 通用）。
 EXTRA_COLUMNS: dict = {

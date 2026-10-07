@@ -24,6 +24,8 @@ const routes = [
       { path: 'qa', name: 'QA', component: () => import('../views/QA.vue'), meta: { title: '智能问数', icon: 'ChatDotRound' } },
       { path: 'audit', name: 'Audit', component: () => import('../views/Audit.vue'), meta: { title: '审计日志', icon: 'List', needAudit: true } },
       { path: 'system', name: 'SystemConfig', component: () => import('../views/SystemConfig.vue'), meta: { title: '系统配置', icon: 'Setting', needAdmin: true } },
+      { path: 'bases', name: 'Bases', component: () => import('../views/Bases.vue'), meta: { title: '多基地配置', icon: 'OfficeBuilding' } },
+      { path: 'changes', name: 'Changes', component: () => import('../views/Changes.vue'), meta: { title: '变更中心', icon: 'Refresh' } },
     ],
   },
   { path: '/:pathMatch(.*)*', redirect: '/' },

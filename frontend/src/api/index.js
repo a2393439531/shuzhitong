@@ -135,3 +135,30 @@ export const listQaHistoryApi = (params) => http.get('/qa/history', { params })
 export const favoriteQaApi = (id, data) => http.patch(`/qa/history/${id}/favorite`, data)
 export const rerunQaApi = (id) => http.post(`/qa/history/${id}/rerun`)
 export const deleteQaApi = (id) => http.delete(`/qa/history/${id}`)
+
+// ---------- 四期：多基地配置 ----------
+export const listBasesApi = () => http.get('/bases')
+export const createBaseApi = (data) => http.post('/bases', data)
+export const getBaseApi = (code) => http.get(`/bases/${code}`)
+export const listStdDiffsApi = (params) => http.get('/bases/diffs/standards', { params })
+export const createStdDiffApi = (standardId, data) => http.post(`/bases/diffs/standards?standard_id=${standardId}`, data)
+export const publishStdDiffApi = (id) => http.post(`/bases/diffs/standards/${id}/publish`)
+export const listIndDiffsApi = (params) => http.get('/bases/diffs/indicators', { params })
+export const createIndDiffApi = (indicatorId, data) => http.post(`/bases/diffs/indicators?indicator_id=${indicatorId}`, data)
+export const publishIndDiffApi = (id) => http.post(`/bases/diffs/indicators/${id}/publish`)
+export const effectiveStandardApi = (id, baseCode) => http.get(`/bases/effective/standard/${id}`, { params: { base_code: baseCode } })
+export const effectiveIndicatorApi = (code, baseCode) => http.get(`/bases/effective/indicator/${code}`, { params: { base_code: baseCode } })
+
+// ---------- 四期：变更中心 ----------
+export const listChangesApi = (params) => http.get('/changes', { params })
+export const createChangeApi = (data) => http.post('/changes', data)
+export const getChangeApi = (id) => http.get(`/changes/${id}`)
+export const submitChangeApi = (id) => http.post(`/changes/${id}/submit`)
+export const confirmChangeApi = (id, data) => http.post(`/changes/${id}/confirm`, data)
+export const effectChangeApi = (id) => http.post(`/changes/${id}/effect`)
+export const rejectChangeApi = (id, data) => http.post(`/changes/${id}/reject`, data)
+export const rollbackChangeApi = (id) => http.post(`/changes/${id}/rollback`)
+
+// ---------- 四期：运营大盘 ----------
+export const opsOverviewApi = () => http.get('/ops/overview')
+export const auditTrendApi = (params) => http.get('/ops/audit-trend', { params })

@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     )
 
     # ---------------- 应用 ----------------
-    SZT_APP_VERSION: str = "1.1.0"
+    SZT_APP_VERSION: str = "1.2.0"
 
     # ---------------- Server ----------------
     SZT_HOST: str = "0.0.0.0"
@@ -53,6 +53,9 @@ class Settings(BaseSettings):
     # ---------------- 三期：服务应用 ----------------
     SZT_SVC_RATE_LIMIT: int = 60  # 服务调用限流：每用户每服务每分钟次数
     SZT_QA_SQL_LIMIT: int = 200  # 智能问数受控查询默认行数上限
+
+    # ---------------- 四期：推广运营 ----------------
+    SZT_OPS_TREND_DAYS: int = 14  # 运营大盘趋势统计天数
 
     # ---------- 派生属性 ----------
 

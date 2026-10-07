@@ -41,6 +41,7 @@ class _NeedClarify(Exception):
 class AskBody(BaseModel):
     question: str
     chart: str = "auto"  # auto / line / bar / pie / stat / table
+    base_code: str | None = None  # 四期：基地上下文，按基地差异口径计算并声明
 
 
 # ================= 内部：ask 主流程 =================
@@ -109,7 +110,7 @@ def _understanding_text(intent: dict, entities: dict) -> str:
 
 
 def _run_ask(conn, user, question: str, chart_mode: str,
-             request: Request | None) -> dict:
+             request: Request | None, base_code: str | None = None) -> dict:
     t0 = time.perf_counter()
     question = (question or "").strip()
     llm = _llm_client()
@@ -177,7 +178,7 @@ def _run_ask(conn, user, question: str, chart_mode: str,
     try:
         if intent["kind"] == "metric":
             payload = _exec_metric(conn, user, intent, entities, question,
-                                   chart_mode, llm)
+                                   chart_mode, llm, base_code)
         elif intent["kind"] == "service":
             payload = _exec_service(conn, user, intent, entities, question,
                                     chart_mode, llm)
@@ -250,7 +251,8 @@ def _metric_dimension(question: str, entities: dict, code: str) -> str:
     return "stat"
 
 
-def _exec_metric(conn, user, intent, entities, question, chart_mode, llm) -> dict:
+def _exec_metric(conn, user, intent, entities, question, chart_mode, llm,
+                 base_code: str | None = None) -> dict:
     code = intent["code"]
     start, end = entities["period_start"], entities["period_end"]
     dim = ("model_code", entities["model_code"]) if entities.get("model_code") \
@@ -258,7 +260,9 @@ def _exec_metric(conn, user, intent, entities, question, chart_mode, llm) -> dic
     res = qa.compute_metric(conn, code, start, end,
                             dimension=dim[0], dimension_value=dim[1], user=user)
 
-    caliber = qa.get_caliber(conn, code)
+    eff = qa.get_effective_caliber(conn, code, base_code)
+    caliber = {"caliber": eff["caliber"], "target": eff["target"]}
+    base_note = eff["base_note"]
     dimension_kind = _metric_dimension(question, entities, code)
     columns, rows, dimension_kind = qa.metric_chart_rows(
         conn, code, entities, user, dimension_kind)
@@ -314,6 +318,8 @@ def _exec_metric(conn, user, intent, entities, question, chart_mode, llm) -> dic
         chart_data = qa.build_chart(ctype, columns, rows)
 
     interpretation = qa.build_interpretation(base, llm)
+    if base_note:
+        interpretation += "\n【口径声明】" + base_note
     tables = [caliber.get("target") or "work_orders"]
     return {
         "question": question, "status": "success",
@@ -322,7 +328,8 @@ def _exec_metric(conn, user, intent, entities, question, chart_mode, llm) -> dic
                           "text": _understanding_text(intent, entities)},
         "scope": {"caliber": caliber["caliber"],
                    "time": f"{start}~{end}",
-                   "org": _org_label(user, entities)},
+                   "org": _org_label(user, entities),
+                   "base": {"code": base_code, "note": base_note}},
         "sql": None, "via": "metric",
         "columns": columns, "rows": rows, "row_count": len(rows),
         "chart": chart_data,
@@ -474,7 +481,8 @@ def _exec_sql(conn, user, intent, entities, question, chart_mode, llm) -> dict:
 def ask(body: AskBody, request: Request, user=Depends(get_current_user)):
     conn = get_conn()
     try:
-        return _run_ask(conn, user, body.question, body.chart, request)
+        return _run_ask(conn, user, body.question, body.chart, request,
+                        body.base_code)
     finally:
         conn.close()
 
