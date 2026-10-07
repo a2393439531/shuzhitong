@@ -1,0 +1,8 @@
+# 不进镜像的开发期文件
+.venv/
+__pycache__/
+*.pyc
+data/
+tests/
+.pytest_cache/
+.env

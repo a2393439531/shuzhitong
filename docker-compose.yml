@@ -1,0 +1,66 @@
+# 数治通 docker-compose：全部配置经环境变量 / .env 注入
+# 用法：
+#   cp .env.example .env        # 按需修改
+#   docker compose up -d --build
+# PostgreSQL 版本：
+#   # .env 中设置 SZT_DB_URL=postgresql://szt:szt123@shuzhitong-db:5432/shuzhitong
+#   docker compose --profile pg up -d --build
+
+services:
+  shuzhitong-api:
+    build: ./backend
+    container_name: shuzhitong-api
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - SZT_HOST=0.0.0.0
+      - SZT_PORT=8000
+      - SZT_WORKERS=${SZT_WORKERS:-1}
+      - SZT_LOG_LEVEL=${SZT_LOG_LEVEL:-info}
+      - SZT_CORS_ORIGINS=${SZT_CORS_ORIGINS:-*}
+      - SZT_DB_URL=${SZT_DB_URL:-}
+      - SZT_DATA_DIR=/app/data
+      - SZT_SEED_DEMO_DATA=${SZT_SEED_DEMO_DATA:-true}
+      - SZT_JWT_SECRET=${SZT_JWT_SECRET:-dev-insecure-secret-change-me}
+      - SZT_TOKEN_EXPIRE_MINUTES=${SZT_TOKEN_EXPIRE_MINUTES:-720}
+      - SZT_LLM_PROVIDER=${SZT_LLM_PROVIDER:-disabled}
+      - SZT_LLM_BASE_URL=${SZT_LLM_BASE_URL:-}
+      - SZT_LLM_API_KEY=${SZT_LLM_API_KEY:-}
+      - SZT_LLM_MODEL=${SZT_LLM_MODEL:-}
+      - SZT_LLM_TIMEOUT=${SZT_LLM_TIMEOUT:-60}
+    ports:
+      - "${HOST_PORT:-8000}:8000"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+
+  # 可选：PostgreSQL（docker compose --profile pg up 启用）
+  shuzhitong-db:
+    image: postgres:16-alpine
+    container_name: shuzhitong-db
+    profiles: ["pg"]
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-shuzhitong}
+      - POSTGRES_USER=${POSTGRES_USER:-szt}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-szt123}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  shuzhitong-web:
+    build: ./frontend
+    container_name: shuzhitong-web
+    environment:
+      # 前端 API 地址：默认 /api（同域 nginx 反代）；分离部署填绝对地址
+      - SZT_API_BASE=${SZT_API_BASE:-/api}
+      # nginx 反代后端目标
+      - SZT_API_UPSTREAM=${SZT_API_UPSTREAM:-http://shuzhitong-api:8000}
+    ports:
+      - "8080:80"
+    depends_on:
+      - shuzhitong-api
+    restart: unless-stopped
+
+volumes:
+  pgdata:

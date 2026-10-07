@@ -1,0 +1,1 @@
+{"dependencies":{"axios":"^1.7.9","element-plus":"^2.9.10","vue":"^3.5.13","vue-router":"^4.5.0"},"description":"数治通 · 数据治理与智能问数一体化平台（一期：治理基础）前端","devDependencies":{"@vitejs/plugin-vue":"^5.2.1","vite":"^6.0.3"},"name":"shuzhitong-frontend","private":true,"scripts":{"build":"vite build","dev":"vite","preview":"vite preview"},"type":"module","version":"1.0.0"}
