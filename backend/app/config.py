@@ -50,6 +50,10 @@ class Settings(BaseSettings):
     # ---------------- 其他 ----------------
     SZT_SEED_DEMO_DATA: bool = True  # 生产可设为 false 关闭演示数据灌入
 
+    # ---------------- 三期：服务应用 ----------------
+    SZT_SVC_RATE_LIMIT: int = 60  # 服务调用限流：每用户每服务每分钟次数
+    SZT_QA_SQL_LIMIT: int = 200  # 智能问数受控查询默认行数上限
+
     # ---------- 派生属性 ----------
 
     @property

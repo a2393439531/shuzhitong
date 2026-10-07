@@ -17,11 +17,14 @@ from .routers import (
     fieldmap,
     llm,
     masterdata,
+    metrics,
     objects,
     processes,
+    qa,
     quality,
     resources,
     responsibilities,
+    services,
     standards,
     system,
 )
@@ -75,6 +78,9 @@ app.include_router(audit.router)
 app.include_router(dashboard.router)
 app.include_router(llm.router)
 app.include_router(system.router)
+app.include_router(services.router)
+app.include_router(metrics.router)
+app.include_router(qa.router)
 
 
 @app.get("/api/health")

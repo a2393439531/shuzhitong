@@ -14,7 +14,7 @@
 """
 import re
 
-from sqlalchemy import Column, Integer, String, create_engine, text as sa_text
+from sqlalchemy import Column, Float, Integer, String, create_engine, text as sa_text
 from sqlalchemy.orm import declarative_base
 
 from .config import settings
@@ -430,9 +430,158 @@ class DemoDeviceLedger(Base):
     updated_at = Column(String)
 
 
+# ================= 三期表结构（服务应用） =================
+
+class ServiceVersion(Base):
+    __tablename__ = "service_versions"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    service_id = Column(Integer, nullable=False)
+    version = Column(String, nullable=False)
+    change_desc = Column(String)
+    created_at = Column(String, nullable=False)
+
+
+class ServiceSubscription(Base):
+    __tablename__ = "service_subscriptions"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    service_id = Column(Integer, nullable=False)
+    user_id = Column(Integer, nullable=False)
+    username = Column(String)
+    status = Column(String, nullable=False, default="待审核")  # 待审核/已授权/已拒绝
+    applied_at = Column(String, nullable=False)
+    reviewed_at = Column(String)
+    review_note = Column(String)
+
+
+class ServiceCall(Base):
+    __tablename__ = "service_calls"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    service_id = Column(Integer, nullable=False)
+    user_id = Column(Integer)
+    username = Column(String)
+    endpoint = Column(String)
+    elapsed_ms = Column(Integer, default=0)
+    status_code = Column(Integer, default=200)
+    error = Column(String)
+    created_at = Column(String, nullable=False)
+
+
+class ServiceNotice(Base):
+    __tablename__ = "service_notices"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    service_id = Column(Integer, nullable=False)
+    version = Column(String)
+    content = Column(String)
+    created_at = Column(String, nullable=False)
+
+
+class IndicatorVersion(Base):
+    __tablename__ = "indicator_versions"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    indicator_id = Column(Integer, nullable=False)
+    version = Column(String, nullable=False)
+    snapshot = Column(String)  # JSON：该版本指标定义快照
+    change_desc = Column(String)
+    created_at = Column(String, nullable=False)
+
+
+class IndicatorResult(Base):
+    __tablename__ = "indicator_results"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    indicator_id = Column(Integer, nullable=False)
+    version = Column(String, nullable=False)
+    params_hash = Column(String, nullable=False)
+    dimension = Column(String)
+    period = Column(String)
+    value = Column(Float)
+    numerator = Column(Float)
+    denominator = Column(Float)
+    computed_at = Column(String, nullable=False)
+
+
+class QaHistory(Base):
+    __tablename__ = "qa_history"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, nullable=False)
+    question = Column(String, nullable=False)
+    understanding = Column(String)  # JSON：问题理解
+    sql = Column(String)
+    via = Column(String)  # metric/service/sql
+    chart_type = Column(String)
+    row_count = Column(Integer, default=0)
+    interpretation = Column(String)
+    quality_note = Column(String)
+    is_favorite = Column(Integer, default=0)
+    status = Column(String, default="success")  # success/need_clarify/refused/error
+    error = Column(String)
+    created_at = Column(String, nullable=False)
+
+
+class WorkOrder(Base):
+    __tablename__ = "work_orders"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    code = Column(String, nullable=False, unique=True)
+    device_code = Column(String)
+    model_code = Column(String)
+    base = Column(String)
+    dept = Column(String)
+    title = Column(String)
+    plan_start = Column(String)   # 计划开始 YYYY-MM-DD
+    plan_end = Column(String)     # 计划完成 YYYY-MM-DD
+    actual_end = Column(String)   # 实际完成 YYYY-MM-DD
+    delay_approved = Column(Integer, default=0)  # 延期审批通过
+    cancel_flag = Column(Integer, default=0)    # 取消标记
+    status = Column(String)
+    created_at = Column(String, nullable=False)
+
+
+class MaterialIssue(Base):
+    __tablename__ = "material_issues"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    wo_code = Column(String)
+    material_code = Column(String)
+    material_name = Column(String)
+    qty = Column(Float)
+    amount = Column(Float)  # 金额，负数为退料
+    issue_date = Column(String)  # YYYY-MM-DD
+    dept = Column(String)
+
+
 # ================= 轻量迁移：既有表新增列 =================
 # {表名: [(列名, 类型), ...]}，init_db 时自动补列（SQLite / PostgreSQL 通用）。
 EXTRA_COLUMNS: dict = {
+    # 三期：问数历史存全量回答 JSON（历史载入时完整渲染）
+    "qa_history": [
+        ("response", "TEXT"),
+    ],
+    # 三期：扩展一期预埋的 services / indicators 占位表
+    "services": [
+        ("code", "TEXT"),            # 服务编码（唯一）
+        ("svc_type", "TEXT"),       # master/relation/detail/metric/combo/validate
+        ("data_source", "TEXT"),     # 数据来源
+        ("standard_version", "TEXT"),# 关联标准版本
+        ("owner", "TEXT"),           # 责任人
+        ("permission_req", "TEXT"),  # 公开/授权
+        ("quality_status", "TEXT"),  # 质量状态
+        ("update_freq", "TEXT"),     # 更新频率
+        ("api_version", "TEXT"),     # 接口版本
+        ("endpoint_path", "TEXT"),   # 调用路径标识
+        ("created_by", "TEXT"),
+        ("created_at", "TEXT"),
+    ],
+    "indicators": [        ("code", "TEXT"),            # 指标编码（唯一）
+        ("biz_def", "TEXT"),         # 业务定义
+        ("calc_rule", "TEXT"),       # JSON：numerator_sql/denominator_sql/description
+        ("scope_include", "TEXT"),   # 纳入范围
+        ("scope_exclude", "TEXT"),   # 排除范围
+        ("time_rule", "TEXT"),       # 发生时间/完成时间/统计时点
+        ("granularity", "TEXT"),     # 数据粒度
+        ("dimensions", "TEXT"),      # JSON：分析维度
+        ("data_sources", "TEXT"),    # JSON：数据来源
+        ("owner_dept", "TEXT"),
+        ("owner_role", "TEXT"),
+        ("created_at", "TEXT"),
+    ],
     "quality_issues": [
         ("assignee_type", "TEXT"),   # 业务 / 技术
         ("lead_assignee", "TEXT"),    # 多责任方时的牵头人
@@ -483,6 +632,20 @@ def get_engine():
         else:
             _engine = create_engine(url, pool_pre_ping=True, pool_size=5, max_overflow=10)
     return _engine
+
+
+def reset_engine() -> None:
+    """丢弃引擎单例，下次 get_engine() 按当前环境变量重建。
+
+    用途：测试场景下每个测试文件指定不同的 SZT_DB_PATH，需要独立库。
+    """
+    global _engine
+    if _engine is not None:
+        try:
+            _engine.dispose()
+        except Exception:
+            pass
+    _engine = None
 
 
 def init_db() -> None:
